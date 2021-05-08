@@ -3,6 +3,7 @@
 import rospy
 from geometry_msgs.msg import PoseStamped
 from styx_msgs.msg import Lane, Waypoint
+from scipy.spatial import KDTree
 
 import math
 
@@ -38,14 +39,74 @@ class WaypointUpdater(object):
 
         # TODO: Add other member variables you need below
 
-        rospy.spin()
+        ### Step1video {
+        self.pose = None
+        self.base_waypoints = None
+        self.waypoints_2d = None
+        self.waypoints_tree = None
+        
+        # rospy.spin()
+        self.loop()
+        ### Step1video }
+
+    ### Step1video {
+    def loop(self):
+        rate = rospy.Rate(50) # could be 30
+        while not rospy.is_shutdown():
+            if self.pose and self.base_waypoints:
+                closest_waypoint_idx = self.get_closest_waypoint_id()
+                self.publish_waypoints(closest_waypoint_idx)
+            rate.sleep()
+    ### Step1video }
+
+        ### Step1video {
+    def get_closest_waypoint_id(self):
+        x = self.pose.pose.position.x
+        y = self.pose.pose.position.y
+        closest_idx = self.waypoint_tree.query([x, y], 1)[1] # , 1: only one, [1]: [position. index]
+
+        # Is it ahead/behind?
+        closest_coord = self.waypoints_2d[closest_idx]
+        prev_coord = self.waypoints_2d[closest_idx - 1]
+
+        # hyperplane through closest coords equation
+        # (explanation: before 11:00 in 5. Waypoint Updater Partial video)
+        cl_vect = np.array(closest_coord)
+        prev_vect = np.array(prev_coord)
+        pos_vect = np.array([x, y])
+
+        val = np.dot(cl_vect - prev_vect, pos_vect - cl_vect)
+
+        if val > 0:
+            return (closest_idx + 1) % len(self.waypoints_2d)
+
+        return closest_idx
+        ### Step1video }
 
     def pose_cb(self, msg):
-        # TODO: Implement
-        pass
+        ### Step1video
+        # ~ 50 hz
+        self.pose = msg
+        ### Step1video
+
+    ### Step1video
+    def publis_waypoints(self, closest_idx):
+        lane = Lane()
+        lane.header = self.base_waypoints.header # isn't used!
+        lane.waypoints = self.base_waypoints.waypoints[closest_idx:closest_idx + LOOKAHEAD_WPS]
+        self.final_waypoints_pub.publish(lane)
+
+
+        # rostopic echo /final_waypoints
+    ### Step1video
 
     def waypoints_cb(self, waypoints):
-        # TODO: Implement
+        self.base_waypoints = waypoints
+        if not self.waypoints_2d:
+            self.waypoints_2d = [[waypoint.pose.position.x, waypoint.pose.position.y] \
+                    for waypoint in waypoints]
+
+            self.waypoint_tree = KDTree(self.waypoints_2d)
         pass
 
     def traffic_cb(self, msg):
