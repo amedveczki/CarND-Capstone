@@ -4,7 +4,9 @@ import rospy
 from geometry_msgs.msg import PoseStamped
 from styx_msgs.msg import Lane, Waypoint
 from scipy.spatial import KDTree
+import numpy as np
 
+from std_msgs.msg import Int32
 import math
 
 '''
@@ -44,7 +46,7 @@ class WaypointUpdater(object):
         self.pose = None
         self.base_waypoints = None
         self.waypoints_2d = None
-        self.waypoints_tree = None
+        self.waypoint_tree = None
         
         # rospy.spin()
         self.loop()
@@ -94,6 +96,7 @@ class WaypointUpdater(object):
         closest_idx = self.get_closest_waypoint_idx()
         farthest_idx = closest_idx + LOOKAHEAD_WPS
         base_waypoints = self.base_lane.waypoints[closest_idx:farthest_idx];
+        rospy.logwarn("Stopline wp idx: {0}".format(self.stopline_wp_idx))
 
         if self.stopline_wp_idx == -1 or (self.stopline_wp_idx >= farthest_idx):
             lane.waypoints = base_waypoints
@@ -106,7 +109,19 @@ class WaypointUpdater(object):
             p = Waypoint()
             p.pose = wp.pose
 
-            stop_idx = max(self
+            stop_idx = max(self.stopline_wp_idx - closest_idx - 2, 0)
+            dist = self.distance(waypoints, i, stop_idx)
+            vel = math.sqrt(2 * MAX_DECEL * dist)
+            if vel < 1.:
+		vel = 0.
+
+            p.twist.twist.linear.x = min(vel, wp.twist.twist.linear.x)
+            temp.append(p)
+
+	return temp
+
+
+
 
     def pose_cb(self, msg):
         ### Step1video
@@ -115,7 +130,7 @@ class WaypointUpdater(object):
         ### Step1video
 
     ### Step1video {
-    def publis_waypoints(self, closest_idx):
+    def publish_waypoints(self, closest_idx):
         lane = Lane()
         lane.header = self.base_waypoints.header # isn't used!
         lane.waypoints = self.base_waypoints.waypoints[closest_idx:closest_idx + LOOKAHEAD_WPS]
@@ -126,17 +141,25 @@ class WaypointUpdater(object):
     ### Step1video }
 
     def waypoints_cb(self, waypoints):
+        rospy.logerr('waypoints_cb')
         ### Step2video {
-        self.base_waypoints = waypoints
         if not self.waypoints_2d:
-            self.waypoints_2d = [[waypoint.pose.position.x, waypoint.pose.position.y] \
-                    for waypoint in waypoints]
+            rospy.logerr('waypoints_cb - no wp2d!')
+            self.waypoints_2d = [[waypoint.pose.pose.position.x, waypoint.pose.pose.position.y] \
+                    for waypoint in waypoints.waypoints]
 
+            rospy.logerr('before creating waypoint_tree')
             self.waypoint_tree = KDTree(self.waypoints_2d)
+            rospy.logerr('after creating waypoint_tree')
+        else:
+            rospy.logerr('self.waypoints_2d was not null')
         ### Step2video }
+        rospy.logerr("after waypoints_cb, wptree should now be set!")
+        self.base_waypoints = waypoints
 
     def traffic_cb(self, msg):
         ### Step2video {
+        rospy.logwarn("waypoint_updater trafficb stopline wpidx: %d" % msg.data)
         self.stopline_wp_idx = msg.data
         ### Step2video }
 

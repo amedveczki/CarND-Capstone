@@ -1,4 +1,7 @@
 from pid import PID
+import rospy
+from yaw_controller import YawController
+from lowpass import LowPassFilter
 
 GAS_DENSITY = 2.858
 ONE_MPH = 0.44704
@@ -35,11 +38,11 @@ class Controller(object):
     ### DBWVideo }
 
 
-    def control(self, *args, **kwargs):
+        ### DBWVideo {
+    def control(self, current_vel, dbw_enabled, linear_vel, angular_vel):
         # TODO: Change the arg, kwarg list to suit your needs
         # Return throttle, brake, steer
 
-        ### DBWVideo {
         if not dbw_enabled:
             self.throttle_controller.reset()
             return 0., 0., 0.
@@ -52,7 +55,7 @@ class Controller(object):
         ## rospy.logwarn("current_vel       : {0}".format(current_vel       ))        
         ## rospy.logwarn("self.vel_lpf.get(): {0}".format(self.vel_lpf.get()))        
 
-        steering = self.yaw_controller.get_steering
+        steering = self.yaw_controller.get_steering(linear_vel, angular_vel, current_vel)
         
         vel_error = linear_vel - current_vel
         self.last_vel = current_vel

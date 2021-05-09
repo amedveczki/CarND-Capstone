@@ -98,7 +98,7 @@ class DBWNode(object):
                         self.linear_vel,
                         self.angular_vel)
             if self.dbw_enabled:
-               self.publish(self.throttle, self.brake, self.steer)
+               self.publish(self.throttle, self.brake, self.steering)
             ### DBWVideo }
             rate.sleep()
 
@@ -114,27 +114,6 @@ class DBWNode(object):
         self.current_vel = msg.twist.linear.x
 
     ### DBWVideo }
-
-    def publish_self(self, throttle, brake, steer):
-        ### DBWVideo {
-        tcmd = ThrottleCmd()
-        tcmd.enable = True
-        tcmd.pedal_cmd_type = ThrottleCmd.CMD_PERCENT
-        tcmd.pedal_cmd = throttle
-        self.throttle_pub.publish(tcmd)
-
-        scmd = SteeringCmd()
-        scmd.enable = True
-        scmd.steering_wheel_angle_cmd = steer
-        self.steer_pub.publish(scmd)
-
-        bcmd = BrakeCmd()
-        bcmd.enable = True
-        bcmd.pedal_cmd_type = BrakeCmd.CMD_TORQUE
-        bcmd.pedal_cmd = brake
-        ### DBWVideo }
-        self.brake_pub.publish(bcmd)
-
 
     def publish(self, throttle, brake, steer):
         tcmd = ThrottleCmd()
