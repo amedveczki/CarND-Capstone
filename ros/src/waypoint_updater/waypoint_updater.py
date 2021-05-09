@@ -31,6 +31,7 @@ class WaypointUpdater(object):
 
         rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
+        rospy.Subscriber('/traffic_waypoint', Int32, self.waypoints_cb)
 
         # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
 
@@ -83,13 +84,37 @@ class WaypointUpdater(object):
         return closest_idx
         ### Step1video }
 
+    def publish_waypoints(self):
+        final_lane = self.generate_lane()
+        self.final_waypoints_pub.publish(final_lane)
+
+    def generate_lane(self):
+        lane = Lane()
+
+        closest_idx = self.get_closest_waypoint_idx()
+        farthest_idx = closest_idx + LOOKAHEAD_WPS
+        base_waypoints = self.base_lane.waypoints[closest_idx:farthest_idx];
+
+        if self.stopline_wp_idx == -1 or (self.stopline_wp_idx >= farthest_idx):
+            lane.waypoints = base_waypoints
+        else:
+            lane.waypoints = self.decelerate_waypoints(base_waypoints, closest_idx)
+
+    def decelerate_waypoints(self, waypoints, closest_idx):
+        temp = []
+        for i, wp in enumerate(waypoints):
+            p = Waypoint()
+            p.pose = wp.pose
+
+            stop_idx = max(self
+
     def pose_cb(self, msg):
         ### Step1video
         # ~ 50 hz
         self.pose = msg
         ### Step1video
 
-    ### Step1video
+    ### Step1video {
     def publis_waypoints(self, closest_idx):
         lane = Lane()
         lane.header = self.base_waypoints.header # isn't used!
@@ -98,20 +123,22 @@ class WaypointUpdater(object):
 
 
         # rostopic echo /final_waypoints
-    ### Step1video
+    ### Step1video }
 
     def waypoints_cb(self, waypoints):
+        ### Step2video {
         self.base_waypoints = waypoints
         if not self.waypoints_2d:
             self.waypoints_2d = [[waypoint.pose.position.x, waypoint.pose.position.y] \
                     for waypoint in waypoints]
 
             self.waypoint_tree = KDTree(self.waypoints_2d)
-        pass
+        ### Step2video }
 
     def traffic_cb(self, msg):
-        # TODO: Callback for /traffic_waypoint message. Implement
-        pass
+        ### Step2video {
+        self.stopline_wp_idx = msg.data
+        ### Step2video }
 
     def obstacle_cb(self, msg):
         # TODO: Callback for /obstacle_waypoint message. We will implement it later
