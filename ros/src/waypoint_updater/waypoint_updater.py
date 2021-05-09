@@ -24,7 +24,7 @@ as well as to verify your TL classifier.
 TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
-LOOKAHEAD_WPS = 200 # Number of waypoints we will publish. You can change this number
+LOOKAHEAD_WPS = 10 # Number of waypoints we will publish. You can change this number
 
 
 class WaypointUpdater(object):
@@ -33,7 +33,7 @@ class WaypointUpdater(object):
 
         rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
-        rospy.Subscriber('/traffic_waypoint', Int32, self.waypoints_cb)
+        rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_cb)
 
         # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
 
@@ -57,7 +57,7 @@ class WaypointUpdater(object):
     def loop(self):
         rate = rospy.Rate(50) # could be 30
         while not rospy.is_shutdown():
-            if self.pose and self.base_waypoints:
+            if self.pose and self.base_lane:
                 self.publish_waypoints()
             rate.sleep()
     ### Step1video }
@@ -149,7 +149,6 @@ class WaypointUpdater(object):
             rospy.logerr('self.waypoints_2d was not null')
         ### Step2video }
         rospy.logerr("after waypoints_cb, wptree should now be set!")
-        self.base_waypoints = waypoints
 
     def traffic_cb(self, msg):
         ### Step2video {
