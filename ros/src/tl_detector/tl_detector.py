@@ -87,6 +87,7 @@ class TLDetector(object):
         of times till we start using it. Otherwise the previous stable state is
         used.
         '''
+	rospy.logwarn("TL state %d count %d lightwp %d" % (state, self.state_count, light_wp))
         if self.state != state:
             self.state_count = 0
             self.state = state
@@ -163,11 +164,18 @@ class TLDetector(object):
                 if d >= 0 and d < diff:
                     diff = d
                     closest_light = light
+
                     line_wp_idx = temp_wp_idx
+	else:
+		rospy.logerr('Traffic: no self.pose')
+		
 
         if closest_light:
             state = self.get_light_state(closest_light)
+	    rospy.logerr('Traffic: closest light idx %d state %d' % (line_wp_idx, state))
             return line_wp_idx, state
+	else:
+	    rospy.logerr('Traffic: no closest light')
 
         return -1, TrafficLight.UNKNOWN
 
