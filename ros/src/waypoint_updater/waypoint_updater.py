@@ -44,6 +44,7 @@ class WaypointUpdater(object):
 
         ### Step1video {
         self.pose = None
+	self.stopline_wp_idx = -1
         self.base_waypoints = None
         self.waypoints_2d = None
         self.waypoint_tree = None
@@ -57,13 +58,12 @@ class WaypointUpdater(object):
         rate = rospy.Rate(50) # could be 30
         while not rospy.is_shutdown():
             if self.pose and self.base_waypoints:
-                closest_waypoint_idx = self.get_closest_waypoint_id()
-                self.publish_waypoints(closest_waypoint_idx)
+                self.publish_waypoints()
             rate.sleep()
     ### Step1video }
 
         ### Step1video {
-    def get_closest_waypoint_id(self):
+    def get_closest_waypoint_idx(self):
         x = self.pose.pose.position.x
         y = self.pose.pose.position.y
         closest_idx = self.waypoint_tree.query([x, y], 1)[1] # , 1: only one, [1]: [position. index]
@@ -103,6 +103,8 @@ class WaypointUpdater(object):
         else:
             lane.waypoints = self.decelerate_waypoints(base_waypoints, closest_idx)
 
+        return lane
+
     def decelerate_waypoints(self, waypoints, closest_idx):
         temp = []
         for i, wp in enumerate(waypoints):
@@ -129,20 +131,12 @@ class WaypointUpdater(object):
         self.pose = msg
         ### Step1video
 
-    ### Step1video {
-    def publish_waypoints(self, closest_idx):
-        lane = Lane()
-        lane.header = self.base_waypoints.header # isn't used!
-        lane.waypoints = self.base_waypoints.waypoints[closest_idx:closest_idx + LOOKAHEAD_WPS]
-        self.final_waypoints_pub.publish(lane)
-
-
         # rostopic echo /final_waypoints
-    ### Step1video }
 
     def waypoints_cb(self, waypoints):
         rospy.logerr('waypoints_cb')
         ### Step2video {
+	self.base_lane = waypoints
         if not self.waypoints_2d:
             rospy.logerr('waypoints_cb - no wp2d!')
             self.waypoints_2d = [[waypoint.pose.pose.position.x, waypoint.pose.pose.position.y] \
